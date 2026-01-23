@@ -37,13 +37,11 @@ exports.updateResume = async (req, res) => {
       { _id: req.params.id, user: req.userId },
 
       {
-        title: req.body.name,
-        data: req.body,
+        title: req.body.data.name,
+        data: req.body.data,
       },
       { new: true },
     );
-    console.log(req.params.id, req.body, req.userId, req.body.name);
-
     if (!updated) {
       return res.status(404).json({ message: "Resume not found" });
     }

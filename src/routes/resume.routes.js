@@ -8,8 +8,8 @@ const {
   getMyResumes,
 } = require("../controllers/resume.controller");
 
-router.post("/", auth, createResume);
-router.put("/:id", auth, updateResume);
-router.get("/", auth, getMyResumes);
+router.post("/create", auth, createResume);
+router.put("/update/:id", auth, updateResume);
+router.get("/my", auth, getMyResumes);
 
 module.exports = router;

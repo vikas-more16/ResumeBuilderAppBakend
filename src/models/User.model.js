@@ -36,6 +36,7 @@ const UserSchema = new mongoose.Schema(
           "Password must be at least 6 characters and contain letters and numbers",
       },
     },
+    resumes: [{ type: mongoose.Schema.Types.ObjectId, ref: "Resume" }],
   },
   { timestamps: true },
 );

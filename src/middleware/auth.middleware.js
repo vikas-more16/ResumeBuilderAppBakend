@@ -4,8 +4,6 @@ module.exports = (req, res, next) => {
   try {
     let authHeader = req.headers.authorization;
 
-    console.log("RAW AUTH HEADER:", authHeader);
-
     if (!authHeader) {
       return res.status(401).json({ message: "Unauthorized" });
     }

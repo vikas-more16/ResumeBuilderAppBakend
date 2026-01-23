@@ -18,7 +18,8 @@ connectDB();
 app.get("/", (req, res) => {
   res.send("Bakend is running");
 });
-app.use("/api/user", require("./routes/authRoutes.js"));
+app.use("/api/user", require("./routes/auth.routes.js"));
+app.use("/api/resumes", require("./routes/resume.routes.js"));
 
 const PORT = process.env.PORT || 5000;
 

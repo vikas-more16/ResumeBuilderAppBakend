@@ -1,55 +1,88 @@
 const User = require("../models/User.model");
 const jwt = require("jsonwebtoken");
+const admin = require("../config/firebaseAdmin");
 
-const register = async (req, res) => {
+const firebaseAuthRegister = async (req, res) => {
   try {
-    const { username, email, phone, password } = req.body;
-
-    const existingUser = await User.findOne({ username });
-    if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ message: "No token provided" });
     }
 
-    const user = new User({
-      username,
-      email,
-      phone,
-      password,
-    });
+    const firebaseToken = authHeader.split(" ")[1];
+    const decoded = await admin.auth().verifyIdToken(firebaseToken);
 
-    await user.save();
+    const { uid, email } = decoded;
 
-    res.status(201).json({ message: "User registered successfully" });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+    let user = await User.findOne({ email });
 
-const login = async (req, res) => {
-  try {
-    const { username, password } = req.body;
-
-    const user = await User.findOne({ username });
-    if (!user) return res.status(404).json({ message: "user not found" });
-
-    if (password !== user.password) {
-      return res.status(401).json({ message: "Invalid password" });
+    if (!user) {
+      user = await User.create({
+        firebaseUid: uid,
+        email,
+        username: req.body.username || email.split("@")[0],
+        phone: req.body.phone || "",
+      });
     }
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
-    res.status(200).json({
-      message: "Login successful",
-      UserId: user._id,
+
+    res.json({
       token,
-      username: user.username,
-      email: user.email,
-      phone: user.phone,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        phone: user.phone,
+      },
     });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    console.error(err);
+    res.status(401).json({ message: "Invalid Firebase token" });
   }
 };
 
-module.exports = { register, login };
+const firebaseAuthLogin = async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    const firebaseToken = authHeader.split(" ")[1];
+
+    const decoded = await admin.auth().verifyIdToken(firebaseToken);
+    const { email, uid } = decoded;
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found. Please register first.",
+      });
+    }
+
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    res.json({
+      token,
+      user: {
+        firebaseUid: uid,
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        phone: user.phone,
+      },
+    });
+  } catch (err) {
+    console.error("FIREBASE LOGIN ERROR:", err);
+    res.status(401).json({ message: "Invalid Firebase token" });
+  }
+};
+
+module.exports = { firebaseAuthRegister, firebaseAuthLogin };

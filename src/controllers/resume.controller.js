@@ -298,13 +298,11 @@ exports.updateEducation = async (req, res) => {
     const { resumeId } = req.params;
     const { education } = req.body;
 
-    // Validate resumeId
     if (!mongoose.Types.ObjectId.isValid(resumeId)) {
       return res.status(400).json({ message: "Invalid resumeId" });
     }
 
-    // Validate education array
-    if (!Array.isArray(education) || education.length === 0) {
+    if (!Array.isArray(education)) {
       return res.status(400).json({ message: "education must be an array" });
     }
 
@@ -313,25 +311,11 @@ exports.updateEducation = async (req, res) => {
       return res.status(404).json({ message: "Resume not found" });
     }
 
-    education.forEach((edu) => {
-      // 🔄 Update existing education
-      if (edu._id) {
-        const index = resume.education.findIndex(
-          (e) => e._id.toString() === edu._id,
-        );
-
-        if (index !== -1) {
-          resume.education[index] = {
-            ...resume.education[index].toObject(),
-            ...edu,
-          };
-        }
-      }
-      // ➕ Add new education
-      else {
-        resume.education.push(edu);
-      }
-    });
+    // ✅ REPLACE ENTIRE EDUCATION ARRAY
+    resume.education = education.map((edu) => ({
+      ...edu,
+      scoreType: edu.scoreType?.trim().toLowerCase(),
+    }));
 
     await resume.save();
 
@@ -341,7 +325,7 @@ exports.updateEducation = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: error.message });
   }
 };
 

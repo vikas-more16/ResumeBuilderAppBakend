@@ -1,22 +1,19 @@
 const mongoose = require("mongoose");
 
-const educationSchema = new mongoose.Schema(
-  {
-    program: { type: String, trim: true },
-    specialization: { type: String, trim: true },
-    institute: { type: String, trim: true },
-    country: { type: String, trim: true },
-    city: { type: String, trim: true },
-    startDate: { type: Date },
-    endDate: { type: Date },
-    scoreType: {
-      type: String,
-      enum: ["percentage", "cgpa", "grade", "other"],
-    },
-    score: { type: String },
+const educationSchema = new mongoose.Schema({
+  program: { type: String, trim: true },
+  specialization: { type: String, trim: true },
+  institute: { type: String, trim: true },
+  country: { type: String, trim: true },
+  city: { type: String, trim: true },
+  startDate: { type: Date },
+  endDate: { type: Date },
+  scoreType: {
+    type: String,
+    enum: ["percentage", "cgpa", "grade", "other"],
   },
-  { _id: false },
-);
+  score: { type: String },
+});
 
 const experienceSchema = new mongoose.Schema(
   {

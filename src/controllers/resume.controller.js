@@ -1,72 +1,440 @@
+const { default: mongoose } = require("mongoose");
 const Resume = require("../models/Resume.model");
 const User = require("../models/User.model");
 
 /* ================= CREATE RESUME ================= */
 exports.createResume = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
-    const resume = new Resume({
-      user: req.userId,
-      title: "Untitled Resume",
-      data: {
-        name: "",
-        email: "",
-        phone: "",
-        location: "",
-        linkedin: "",
-        github: "",
-        summary: "",
-      },
-    });
+    const { userId, resumeType } = req.body;
 
-    await resume.save();
-    await User.findByIdAndUpdate(
-      req.userId,
-      { $push: { resumes: resume._id } },
-      { new: true },
-    );
-    res.status(201).json(resume);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-/* ================= UPDATE RESUME ================= */
-exports.updateResume = async (req, res) => {
-  try {
-    const updated = await Resume.findOneAndUpdate(
-      { _id: req.params.id, user: req.userId },
-
-      {
-        title: req.body.data.name,
-        data: req.body.data,
-      },
-      { new: true },
-    );
-    if (!updated) {
-      return res.status(404).json({ message: "Resume not found" });
+    if (!userId || !resumeType) {
+      return res.status(400).json({
+        message: "userId and resumeType are required",
+      });
     }
 
-    res.status(200).json(updated);
+    const user = await User.findById(userId).session(session);
+    if (!user) {
+      await session.abortTransaction();
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const resume = await Resume.create(
+      [
+        {
+          user: userId,
+          resumeType,
+          title: "Untitled",
+        },
+      ],
+      { session },
+    );
+
+    user.resumes.push(resume[0]._id);
+    await user.save({ session });
+
+    await session.commitTransaction();
+
+    res.status(201).json({
+      message: "Resume created successfully",
+      resume: resume[0],
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    await session.abortTransaction();
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  } finally {
+    session.endSession();
   }
 };
 
 /* ================= GET USER RESUMES ================= */
 exports.getMyResumes = async (req, res) => {
   try {
-    const user = await User.findById(req.userId).populate({
-      path: "resumes",
-      options: { sort: { createdAt: -1 } },
-    });
+    const { userId } = req.params;
 
-    if (!user) {
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid userId" });
+    }
+
+    const userExists = await User.exists({ _id: userId });
+    if (!userExists) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.status(200).json(user.resumes);
+    const resumes = await Resume.find({ user: userId })
+      .select("_id title resumeType updatedAt createdAt")
+      .sort({ updatedAt: -1 });
+
+    res.status(200).json({
+      count: resumes.length,
+      resumes,
+    });
   } catch (error) {
-    console.error("GET RESUMES ERROR:", error);
-    res.status(500).json({ message: error.message });
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.getResume = async (req, res) => {
+  try {
+    const { resumeId } = req.params;
+
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(resumeId)) {
+      return res.status(400).json({ message: "Invalid resumeId" });
+    }
+
+    const resume = await Resume.findById(resumeId).populate(
+      "user",
+      "username email",
+    );
+
+    if (!resume) {
+      return res.status(404).json({ message: "Resume not found" });
+    }
+
+    res.status(200).json({
+      resume,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.deleteResume = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { resumeId } = req.params;
+
+    // Validate resumeId
+    if (!mongoose.Types.ObjectId.isValid(resumeId)) {
+      return res.status(400).json({ message: "Invalid resumeId" });
+    }
+
+    // Find resume
+    const resume = await Resume.findById(resumeId).session(session);
+    if (!resume) {
+      await session.abortTransaction();
+      return res.status(404).json({ message: "Resume not found" });
+    }
+
+    // Remove resume from user
+    await User.findByIdAndUpdate(
+      resume.user,
+      { $pull: { resumes: resume._id } },
+      { session },
+    );
+
+    // Delete resume
+    await Resume.deleteOne({ _id: resumeId }).session(session);
+
+    await session.commitTransaction();
+
+    res.status(200).json({
+      message: "Resume deleted successfully",
+      resumeId,
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  } finally {
+    session.endSession();
+  }
+};
+
+exports.updateTitle = async (req, res) => {
+  try {
+    const { resumeId } = req.params;
+    const { title } = req.body;
+
+    // Validate resumeId
+    if (!mongoose.Types.ObjectId.isValid(resumeId)) {
+      return res.status(400).json({ message: "Invalid resumeId" });
+    }
+
+    // Validate title
+    if (!title || title.trim().length === 0) {
+      return res.status(400).json({ message: "Title is required" });
+    }
+
+    const updatedResume = await Resume.findByIdAndUpdate(
+      resumeId,
+      { title: title.trim() },
+      { new: true },
+    ).select("_id title updatedAt");
+
+    if (!updatedResume) {
+      return res.status(404).json({ message: "Resume not found" });
+    }
+
+    res.status(200).json({
+      message: "Resume title updated successfully",
+      resume: updatedResume,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.updatePersonalInfo = async (req, res) => {
+  try {
+    const { resumeId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(resumeId)) {
+      return res.status(400).json({ message: "Invalid resumeId" });
+    }
+
+    const resume = await Resume.findById(resumeId);
+    if (!resume) {
+      return res.status(404).json({ message: "Resume not found" });
+    }
+
+    const updates = {};
+
+    // Handle photo upload
+    if (req.file) {
+      const photoUrl = `http://localhost:5000/${Date.now()}-${req.file.originalname}`;
+      updates["personalInfo.photo"] = photoUrl;
+    }
+
+    // Handle text fields (partial update)
+    const allowedFields = [
+      "firstName",
+      "lastName",
+      "jobTitle",
+      "email",
+      "phone",
+      "country",
+      "city",
+      "summary",
+    ];
+
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        updates[`personalInfo.${field}`] = req.body[field];
+      }
+    });
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ message: "No valid fields provided" });
+    }
+
+    const updatedResume = await Resume.findByIdAndUpdate(
+      resumeId,
+      { $set: updates },
+      { new: true },
+    ).select("personalInfo updatedAt");
+
+    res.status(200).json({
+      message: "Personal info updated successfully",
+      personalInfo: updatedResume.personalInfo,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.updateSocialLinks = async (req, res) => {
+  try {
+    const { resumeId } = req.params;
+    const { socialLinks } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(resumeId)) {
+      return res.status(400).json({ message: "Invalid resumeId" });
+    }
+
+    if (!Array.isArray(socialLinks) || socialLinks.length === 0) {
+      return res.status(400).json({ message: "socialLinks must be an array" });
+    }
+
+    const resume = await Resume.findById(resumeId);
+    if (!resume) {
+      return res.status(404).json({ message: "Resume not found" });
+    }
+
+    socialLinks.forEach((link) => {
+      // Update existing link
+      if (link._id) {
+        const index = resume.socialLinks.findIndex(
+          (s) => s._id.toString() === link._id,
+        );
+
+        if (index !== -1) {
+          resume.socialLinks[index] = {
+            ...resume.socialLinks[index].toObject(),
+            ...link,
+          };
+        }
+      } else {
+        // Add new link
+        resume.socialLinks.push(link);
+      }
+    });
+
+    await resume.save();
+
+    res.status(200).json({
+      message: "Social links updated successfully",
+      socialLinks: resume.socialLinks,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.updateEducation = async (req, res) => {
+  try {
+    const { resumeId } = req.params;
+    const { education } = req.body;
+
+    // Validate resumeId
+    if (!mongoose.Types.ObjectId.isValid(resumeId)) {
+      return res.status(400).json({ message: "Invalid resumeId" });
+    }
+
+    // Validate education array
+    if (!Array.isArray(education) || education.length === 0) {
+      return res.status(400).json({ message: "education must be an array" });
+    }
+
+    const resume = await Resume.findById(resumeId);
+    if (!resume) {
+      return res.status(404).json({ message: "Resume not found" });
+    }
+
+    education.forEach((edu) => {
+      // 🔄 Update existing education
+      if (edu._id) {
+        const index = resume.education.findIndex(
+          (e) => e._id.toString() === edu._id,
+        );
+
+        if (index !== -1) {
+          resume.education[index] = {
+            ...resume.education[index].toObject(),
+            ...edu,
+          };
+        }
+      }
+      // ➕ Add new education
+      else {
+        resume.education.push(edu);
+      }
+    });
+
+    await resume.save();
+
+    res.status(200).json({
+      message: "Education updated successfully",
+      education: resume.education,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.updateExperience = async (req, res) => {
+  try {
+    const { resumeId } = req.params;
+    const { experience } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(resumeId)) {
+      return res.status(400).json({ message: "Invalid resumeId" });
+    }
+
+    if (!Array.isArray(experience) || experience.length === 0) {
+      return res.status(400).json({ message: "experience must be an array" });
+    }
+
+    const resume = await Resume.findById(resumeId);
+    if (!resume) {
+      return res.status(404).json({ message: "Resume not found" });
+    }
+
+    experience.forEach((exp) => {
+      if (exp._id) {
+        const index = resume.experience.findIndex(
+          (e) => e._id.toString() === exp._id,
+        );
+
+        if (index !== -1) {
+          resume.experience[index] = {
+            ...resume.experience[index].toObject(),
+            ...exp,
+          };
+        }
+      } else {
+        resume.experience.push(exp);
+      }
+    });
+
+    await resume.save();
+
+    res.status(200).json({
+      message: "Experience updated successfully",
+      experience: resume.experience,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.updateSkills = async (req, res) => {
+  try {
+    const { resumeId } = req.params;
+    const { skills } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(resumeId)) {
+      return res.status(400).json({ message: "Invalid resumeId" });
+    }
+
+    if (!Array.isArray(skills) || skills.length === 0) {
+      return res.status(400).json({ message: "skills must be an array" });
+    }
+
+    const resume = await Resume.findById(resumeId);
+    if (!resume) {
+      return res.status(404).json({ message: "Resume not found" });
+    }
+
+    skills.forEach((skillBlock) => {
+      if (skillBlock._id) {
+        const index = resume.skills.findIndex(
+          (s) => s._id.toString() === skillBlock._id,
+        );
+
+        if (index !== -1) {
+          resume.skills[index] = {
+            ...resume.skills[index].toObject(),
+            ...skillBlock,
+          };
+        }
+      } else {
+        resume.skills.push(skillBlock);
+      }
+    });
+
+    await resume.save();
+
+    res.status(200).json({
+      message: "Skills updated successfully",
+      skills: resume.skills,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
   }
 };

@@ -249,46 +249,26 @@ exports.updateSocialLinks = async (req, res) => {
     const { resumeId } = req.params;
     const { socialLinks } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(resumeId)) {
-      return res.status(400).json({ message: "Invalid resumeId" });
-    }
-
-    if (!Array.isArray(socialLinks) || socialLinks.length === 0) {
+    if (!Array.isArray(socialLinks)) {
       return res.status(400).json({ message: "socialLinks must be an array" });
     }
 
-    const resume = await Resume.findById(resumeId);
+    const resume = await Resume.findByIdAndUpdate(
+      resumeId,
+      { $set: { socialLinks } }, // ✅ FULL REPLACEMENT
+      { new: true },
+    ).select("socialLinks");
+
     if (!resume) {
       return res.status(404).json({ message: "Resume not found" });
     }
 
-    socialLinks.forEach((link) => {
-      // Update existing link
-      if (link._id) {
-        const index = resume.socialLinks.findIndex(
-          (s) => s._id.toString() === link._id,
-        );
-
-        if (index !== -1) {
-          resume.socialLinks[index] = {
-            ...resume.socialLinks[index].toObject(),
-            ...link,
-          };
-        }
-      } else {
-        // Add new link
-        resume.socialLinks.push(link);
-      }
-    });
-
-    await resume.save();
-
     res.status(200).json({
-      message: "Social links updated successfully",
+      message: "Social links updated",
       socialLinks: resume.socialLinks,
     });
-  } catch (error) {
-    console.error(error);
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 };

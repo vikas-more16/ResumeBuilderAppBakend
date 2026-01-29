@@ -318,7 +318,7 @@ exports.updateExperience = async (req, res) => {
       return res.status(400).json({ message: "Invalid resumeId" });
     }
 
-    if (!Array.isArray(experience) || experience.length === 0) {
+    if (!Array.isArray(experience)) {
       return res.status(400).json({ message: "experience must be an array" });
     }
 
@@ -327,22 +327,7 @@ exports.updateExperience = async (req, res) => {
       return res.status(404).json({ message: "Resume not found" });
     }
 
-    experience.forEach((exp) => {
-      if (exp._id) {
-        const index = resume.experience.findIndex(
-          (e) => e._id.toString() === exp._id,
-        );
-
-        if (index !== -1) {
-          resume.experience[index] = {
-            ...resume.experience[index].toObject(),
-            ...exp,
-          };
-        }
-      } else {
-        resume.experience.push(exp);
-      }
-    });
+    resume.experience = experience;
 
     await resume.save();
 
@@ -365,7 +350,7 @@ exports.updateSkills = async (req, res) => {
       return res.status(400).json({ message: "Invalid resumeId" });
     }
 
-    if (!Array.isArray(skills) || skills.length === 0) {
+    if (!Array.isArray(skills)) {
       return res.status(400).json({ message: "skills must be an array" });
     }
 
@@ -374,23 +359,7 @@ exports.updateSkills = async (req, res) => {
       return res.status(404).json({ message: "Resume not found" });
     }
 
-    skills.forEach((skillBlock) => {
-      if (skillBlock._id) {
-        const index = resume.skills.findIndex(
-          (s) => s._id.toString() === skillBlock._id,
-        );
-
-        if (index !== -1) {
-          resume.skills[index] = {
-            ...resume.skills[index].toObject(),
-            ...skillBlock,
-          };
-        }
-      } else {
-        resume.skills.push(skillBlock);
-      }
-    });
-
+    resume.skills = skills;
     await resume.save();
 
     res.status(200).json({

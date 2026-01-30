@@ -88,7 +88,69 @@ const resumeSchema = new mongoose.Schema(
     skills: [skillsSchema],
 
     socialLinks: [socialLinksSchema],
+    resumeCSS: {
+      type: String,
+      default: `
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      padding: 24px;
+      color: #222;
+    }
+
+    h1 {
+      margin-bottom: 4px;
+      font-size: 70px;
+      color: black;
+    }
+
+    .sub {
+      font-size: 30px;
+      color: #555;
+      margin-bottom: 12px;
+    }
+
+    .section {
+      margin-top: 22px;
+      font-weight: bold;
+      font-size: 45px;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 4px;
+    }
+
+    .item {
+      margin-top: 10px;
+      font-size: 35px;
+    }
+
+    .muted {
+      color: #666;
+      font-size: 30px;
+    }
+
+    ul {
+      margin: 6px 0 0 18px;
+    }
+
+    p, li {
+      font-size: 30px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .photo {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+  `,
+    },
   },
+
   {
     timestamps: true,
   },

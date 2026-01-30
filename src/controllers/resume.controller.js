@@ -200,13 +200,11 @@ exports.updatePersonalInfo = async (req, res) => {
 
     const updates = {};
 
-    // Handle photo upload
     if (req.file) {
-      const photoUrl = `http://localhost:5000/${Date.now()}-${req.file.originalname}`;
+      const photoUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
       updates["personalInfo.photo"] = photoUrl;
     }
 
-    // Handle text fields (partial update)
     const allowedFields = [
       "firstName",
       "lastName",
@@ -369,5 +367,35 @@ exports.updateSkills = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.updateResumeCSS = async (req, res) => {
+  try {
+    const { resumeId } = req.params;
+    const { resumeCSS } = req.body;
+
+    if (!resumeCSS) {
+      return res.status(400).json({ error: "resumeCSS is required" });
+    }
+
+    const resume = await Resume.findByIdAndUpdate(
+      resumeId,
+      { resumeCSS },
+      { new: true },
+    );
+
+    if (!resume) {
+      return res.status(404).json({ error: "Resume not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "Resume style updated successfully",
+      resume,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server error" });
   }
 };

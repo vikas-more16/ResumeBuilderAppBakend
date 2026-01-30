@@ -370,32 +370,14 @@ exports.updateSkills = async (req, res) => {
   }
 };
 
-exports.updateResumeCSS = async (req, res) => {
-  try {
-    const { resumeId } = req.params;
-    const { resumeCSS } = req.body;
+exports.updateResumeStyle = async (req, res) => {
+  const { resumeStyle } = req.body;
 
-    if (!resumeCSS) {
-      return res.status(400).json({ error: "resumeCSS is required" });
-    }
+  const resume = await Resume.findByIdAndUpdate(
+    req.params.resumeId,
+    { resumeStyle },
+    { new: true },
+  );
 
-    const resume = await Resume.findByIdAndUpdate(
-      resumeId,
-      { resumeCSS },
-      { new: true },
-    );
-
-    if (!resume) {
-      return res.status(404).json({ error: "Resume not found" });
-    }
-
-    res.json({
-      success: true,
-      message: "Resume style updated successfully",
-      resume,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Server error" });
-  }
+  res.json({ success: true, resume });
 };

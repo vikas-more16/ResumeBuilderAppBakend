@@ -13,7 +13,7 @@ const {
   updateEducation,
   updateExperience,
   updateSkills,
-  updateResumeCSS,
+  updateResumeStyle,
 } = require("../controllers/resume.controller");
 const upload = require("../middleware/upload");
 
@@ -31,6 +31,6 @@ router.patch("/:resumeId/social-links", updateSocialLinks);
 router.patch("/:resumeId/education", updateEducation);
 router.patch("/:resumeId/experience", updateExperience);
 router.patch("/:resumeId/skills", updateSkills);
-router.put("/:resumeId/style", updateResumeCSS);
+router.patch("/:resumeId/style", updateResumeStyle);
 
 module.exports = router;

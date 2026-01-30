@@ -88,66 +88,25 @@ const resumeSchema = new mongoose.Schema(
     skills: [skillsSchema],
 
     socialLinks: [socialLinksSchema],
-    resumeCSS: {
-      type: String,
-      default: `
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      padding: 24px;
-      color: #222;
-    }
+    resumeStyle: {
+      bodyFontFamily: { type: String, default: "Arial, Helvetica, sans-serif" },
+      bodyColor: { type: String, default: "#222" },
 
-    h1 {
-      margin-bottom: 4px;
-      font-size: 70px;
-      color: black;
-    }
+      h1Size: { type: Number, default: 70 },
+      h1Color: { type: String, default: "#000" },
 
-    .sub {
-      font-size: 30px;
-      color: #555;
-      margin-bottom: 12px;
-    }
+      subSize: { type: Number, default: 30 },
+      subColor: { type: String, default: "#555" },
 
-    .section {
-      margin-top: 22px;
-      font-weight: bold;
-      font-size: 45px;
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 4px;
-    }
+      sectionSize: { type: Number, default: 45 },
 
-    .item {
-      margin-top: 10px;
-      font-size: 35px;
-    }
+      itemSize: { type: Number, default: 35 },
 
-    .muted {
-      color: #666;
-      font-size: 30px;
-    }
+      mutedSize: { type: Number, default: 30 },
+      mutedColor: { type: String, default: "#666" },
 
-    ul {
-      margin: 6px 0 0 18px;
-    }
-
-    p, li {
-      font-size: 30px;
-    }
-
-    .header {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-
-    .photo {
-      width: 140px;
-      height: 140px;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-  `,
+      photoSize: { type: Number, default: 140 },
+      photoRadius: { type: Number, default: 50 },
     },
   },
 

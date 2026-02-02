@@ -70,7 +70,10 @@ const resumeSchema = new mongoose.Schema(
     },
 
     personalInfo: {
-      photo: { type: String },
+      photo: {
+        type: String,
+        default: "http://10.0.2.2:5000/uploads/1769997608911-36.jpg",
+      },
       firstName: { type: String, trim: true },
       lastName: { type: String, trim: true },
       jobTitle: { type: String, trim: true },

@@ -396,11 +396,25 @@ exports.finalizeResume = async (req, res) => {
 
   // Save to DB
   await Resume.create({
-    resumeId,
-    resumeData,
     signature
   });
 
   res.json({ resumeId });
+}
+
+
+exports.verifyResume = async (req, res) => {
+  const record = await Resume.findOne({ resumeId: req.params.id });
+
+  if (!record) {
+    return res.json({ valid: false });
+  }
+
+  const isValid = verifyResume(record.resumeData, record.signature);
+
+  res.json({
+    valid: isValid,
+    resumeData: isValid ? record.resumeData : null
+  });
 }
 

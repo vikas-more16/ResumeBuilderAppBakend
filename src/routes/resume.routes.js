@@ -15,6 +15,7 @@ const {
   updateSkills,
   updateResumeStyle,
   finalizeResume,
+  verifyResume,
 } = require("../controllers/resume.controller");
 const upload = require("../middleware/upload");
 
@@ -34,5 +35,7 @@ router.patch("/:resumeId/experience", updateExperience);
 router.patch("/:resumeId/skills", updateSkills);
 router.patch("/:resumeId/style", updateResumeStyle);
 router.post("/:resumeId/finalize", finalizeResume);
+router.get("/verify/:id", verifyResume);
+
 
 module.exports = router;

@@ -111,6 +111,9 @@ const resumeSchema = new mongoose.Schema(
       photoSize: { type: Number, default: 140 },
       photoRadius: { type: Number, default: 50 },
     },
+    signature: {
+      type: String,
+    },
   },
 
   {

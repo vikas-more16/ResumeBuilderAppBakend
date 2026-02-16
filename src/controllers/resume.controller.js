@@ -1,6 +1,8 @@
 const { default: mongoose } = require("mongoose");
+const signResume = require("../utils/signResume.js");
 const Resume = require("../models/Resume.model");
 const User = require("../models/User.model");
+const crypto = require("crypto");
 
 /* ================= CREATE RESUME ================= */
 exports.createResume = async (req, res) => {
@@ -381,3 +383,24 @@ exports.updateResumeStyle = async (req, res) => {
 
   res.json({ success: true, resume });
 };
+
+
+exports.finalizeResume = async (req, res) => {
+  const resumeData = req.body;
+
+  // Generate unique ID
+  const resumeId = "VR-" + crypto.randomBytes(6).toString("hex").toUpperCase();
+
+  // Sign resume
+  const signature = signResume(resumeData);
+
+  // Save to DB
+  await Resume.create({
+    resumeId,
+    resumeData,
+    signature
+  });
+
+  res.json({ resumeId });
+}
+

@@ -449,3 +449,21 @@ exports.verifyResume = async (req, res) => {
 };
 
 
+exports.checkFinalized = async (req, res) => {
+  const existing = await SignedResume.findOne({
+    "resumeData._id": req.params.resumeId
+  });
+
+  if (!existing) {
+    return res.json({ finalized: false });
+  }
+
+  const verifyURL = `https://resumebuilderappbakend.onrender.com/api/resumes/verify/${existing.resumeId}`;
+  const qrBase64 = await QRCode.toDataURL(verifyURL);
+
+  res.json({
+    finalized: true,
+    resumeId: existing.resumeId,
+    qrBase64
+  });
+};

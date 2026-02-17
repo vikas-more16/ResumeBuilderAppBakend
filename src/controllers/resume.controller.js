@@ -6,6 +6,7 @@ const SignedResume = require("../models/SignedResume");
 const crypto = require("crypto");
 const verifySignature = require("../utils/verifyResume");
 const QRCode = require("qrcode");
+const bwipjs = require('bwip-js');
 
 /* ================= CREATE RESUME ================= */
 exports.createResume = async (req, res) => {
@@ -387,7 +388,6 @@ exports.updateResumeStyle = async (req, res) => {
   res.json({ success: true, resume });
 };
 
-
 exports.finalizeResume = async (req, res) => {
   try {
     const resumeData = req.body;
@@ -399,17 +399,27 @@ exports.finalizeResume = async (req, res) => {
 
     await SignedResume.create({
       resumeId,
-      resumeData,
+      resumeData, 
       signature,
     });
 
     const verifyURL = `https://resumebuilderappbakend.onrender.com/api/resumes/verify/${resumeId}`;
 
     const qrBase64 = await QRCode.toDataURL(verifyURL);
+    const barcodeBuffer = await bwipjs.toBuffer({
+      bcid: 'code128',
+      text: resumeId,
+      scale: 4,
+      height: 20,
+      includetext: false,
+    });
+
+    const barcodeBase64 = barcodeBuffer.toString('base64');
 
     res.json({
       resumeId,
       qrBase64,
+      barcodeBase64: `data:image/png;base64,${barcodeBase64}`
     });
   } catch (error) {
     console.error(error);
@@ -417,16 +427,11 @@ exports.finalizeResume = async (req, res) => {
   }
 };
 
-
-
 exports.verifyResume = async (req, res) => {
   try {
     const record = await SignedResume.findOne({
       resumeId: req.params.id,
     });
-    console.log('====================================');
-    console.log(record);
-    console.log('====================================');
 
     if (!record) {
       return res.json({ valid: false });
@@ -448,7 +453,6 @@ exports.verifyResume = async (req, res) => {
   }
 };
 
-
 exports.checkFinalized = async (req, res) => {
   const existing = await SignedResume.findOne({
     "resumeData._id": req.params.resumeId
@@ -460,10 +464,19 @@ exports.checkFinalized = async (req, res) => {
 
   const verifyURL = `https://resumebuilderappbakend.onrender.com/api/resumes/verify/${existing.resumeId}`;
   const qrBase64 = await QRCode.toDataURL(verifyURL);
+  const barcodeBuffer = await bwipjs.toBuffer({
+    bcid: 'code128',
+    text: existing.resumeId,
+    scale: 3,
+    height: 10,
+  });
+
+  const barcodeBase64 = barcodeBuffer.toString('base64');
 
   res.json({
     finalized: true,
     resumeId: existing.resumeId,
-    qrBase64
+    qrBase64,
+    barcodeBase64: `data:image/png;base64,${barcodeBase64}`
   });
 };

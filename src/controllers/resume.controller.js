@@ -4,6 +4,8 @@ const Resume = require("../models/Resume.model");
 const User = require("../models/User.model");
 const SignedResume = require("../models/SignedResume");
 const crypto = require("crypto");
+const verifySignature = require("../utils/verifyResume");
+const QRCode = require("qrcode");
 
 /* ================= CREATE RESUME ================= */
 exports.createResume = async (req, res) => {
@@ -401,7 +403,14 @@ exports.finalizeResume = async (req, res) => {
       signature,
     });
 
-    res.json({ resumeId });
+    const verifyURL = `https://resumebuilderappbakend.onrender.com/api/resumes/verify/${resumeId}`;
+
+    const qrBase64 = await QRCode.toDataURL(verifyURL);
+
+    res.json({
+      resumeId,
+      qrBase64,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Finalize failed" });
@@ -411,23 +420,32 @@ exports.finalizeResume = async (req, res) => {
 
 
 exports.verifyResume = async (req, res) => {
-  const record = await SignedResume.findOne({
-    resumeId: req.params.id,
-  });
+  try {
+    const record = await SignedResume.findOne({
+      resumeId: req.params.id,
+    });
+    console.log('====================================');
+    console.log(record);
+    console.log('====================================');
 
-  if (!record) {
-    return res.json({ valid: false });
+    if (!record) {
+      return res.json({ valid: false });
+    }
+
+    const isValid = verifySignature(
+      record.resumeData,
+      record.signature
+    );
+
+    res.json({
+      valid: isValid,
+      resumeData: isValid ? record.resumeData : null,
+    });
+
+  } catch (error) {
+    console.error("VERIFY ERROR:", error);
+    res.status(500).json({ valid: false });
   }
-
-  const isValid = verifyResume(
-    record.resumeData,
-    record.signature
-  );
-
-  res.json({
-    valid: isValid,
-    resumeData: isValid ? record.resumeData : null,
-  });
 };
 
 

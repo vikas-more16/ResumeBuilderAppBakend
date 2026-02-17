@@ -1,7 +1,8 @@
 const { default: mongoose } = require("mongoose");
-const signResume = require("../utils/signResume.js");
+const signResume = require("../utils/signResume");
 const Resume = require("../models/Resume.model");
 const User = require("../models/User.model");
+const SignedResume = require("../models/SignedResume");
 const crypto = require("crypto");
 
 /* ================= CREATE RESUME ================= */
@@ -386,35 +387,47 @@ exports.updateResumeStyle = async (req, res) => {
 
 
 exports.finalizeResume = async (req, res) => {
-  const resumeData = req.body;
+  try {
+    const resumeData = req.body;
 
-  // Generate unique ID
-  const resumeId = "VR-" + crypto.randomBytes(6).toString("hex").toUpperCase();
+    const resumeId =
+      "VR-" + crypto.randomBytes(6).toString("hex").toUpperCase();
 
-  // Sign resume
-  const signature = signResume(resumeData);
+    const signature = signResume(resumeData);
 
-  // Save to DB
-  await Resume.create({
-    signature
-  });
+    await SignedResume.create({
+      resumeId,
+      resumeData,
+      signature,
+    });
 
-  res.json({ resumeId });
-}
+    res.json({ resumeId });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Finalize failed" });
+  }
+};
+
 
 
 exports.verifyResume = async (req, res) => {
-  const record = await Resume.findOne({ resumeId: req.params.id });
+  const record = await SignedResume.findOne({
+    resumeId: req.params.id,
+  });
 
   if (!record) {
     return res.json({ valid: false });
   }
 
-  const isValid = verifyResume(record.resumeData, record.signature);
+  const isValid = verifyResume(
+    record.resumeData,
+    record.signature
+  );
 
   res.json({
     valid: isValid,
-    resumeData: isValid ? record.resumeData : null
+    resumeData: isValid ? record.resumeData : null,
   });
-}
+};
+
 
